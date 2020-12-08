@@ -1,6 +1,6 @@
-﻿
-@{
-    string apiUrl = "https://thrones-chess-api.herokuapp.com/api/chess";
+﻿@{
+    string socketUrl = "https://thrones-chess-socket.herokuapp.com/"; //"http://localhost:5000";
+    string apiUrl = "https://thrones-chess-api.herokuapp.com/api/chess"; //"http://localhost:5005/api/chess";
     string sessionName = ViewBag.SessionName;
     string playerNickname = ViewBag.PlayerNickname;
     ViewData["Title"] = "View";
@@ -13,8 +13,10 @@
         overflow-y: auto;
         height: 640px;
         border: 1px solid #221d1d;
-        background: #f5e4cb;
+        background: #f3f3f3;
         margin-top: 46px;
+        padding-left: 5px;
+        margin-bottom: 5px;
     }
 
     #board td img:hover {
@@ -49,11 +51,30 @@
         margin-bottom: 10px;
         text-align: center;
     }
+
+    .session-info {
+        color: white;
+        font-size: 28px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    #session-warning{
+        background:#ee2c08;
+    }
+
+    #session-turn {
+        background: #60bf01;
+    }
 </style>
 
 <h1>Chess Session</h1>
 <hr />
 @{
+    <div class="row">
+        <div class="col-md-12 session-info" id="session-warning" style="display:none;"></div>
+        <div class="col-md-12 session-info" id="session-turn" style="display:none;"></div>
+    </div>
     <div class="row">
         <div class="col-md-9">
 
@@ -93,22 +114,34 @@
             </table>
             <div class="player-nickname" id="player1"></div>
         </div>
-        <div id="console" class="col-md-3">
-
+        <div class="col-md-3">
+            <div id="console" ></div>
+            <div>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="chat-text" />
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-outline-secondary" id="send-chat">Chat</button>
+                    </div>
+                </div>
+                
+            </div>
         </div>
     </div>
 
 }
 
+<input type="hidden" id="session-name" />
 
-
+<script src="~/js/socket.io.min.js"></script>
 <script src="~/lib/jquery/dist/jquery.js"></script>
 <script type="text/javascript">
 
+    let socket = {};
     let player = '@playerNickname';
     let currentIndexer = 0;
-    let session = {};
+    let session = null;
     let xCoordinates = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    let checkmate = false;
 
     let selectedStone = {
         type: '',
@@ -129,8 +162,6 @@
             let to = xCoordinates[x - 1] + '' + y;
             let command = from + " " + to;
 
-            console.log(command);
-
             $.ajax({
                 url: '@apiUrl',
                 contentType: 'application/json;charset=utf-8',
@@ -142,13 +173,14 @@
                 success: function (response) {
                     session = response;
 
-                    // remove current
-                    selectedStone.removeCurrentLocation();
-                    selectedStone.release();
+                    if (session.movementResult.isOK) {
+                        // remove current
+                        selectedStone.removeCurrentLocation();
+                        selectedStone.release();
 
-
-                    drawTable();
-                    stoneSelectionBindings();
+                        setTurn();
+                        drawTable();
+                    }                    
                 },
                 error: function (xhr, textStatus, errorThrown) {
                     addToConsole('error occured');
@@ -169,20 +201,125 @@
         }
     };
 
-    function setTurn() {
-
-        let index = session.currentIndexer;
-        index += 1;
-        index = index % 2;
-        session.currentIndexer = index;
-
-        var currentPlayer = getCurrentPlayer();
-        addToConsole('Sıra <strong>' + currentPlayer + '</strong> oyuncusunda!');
-    }
-
 
     $(document).ready(function () {
 
+        $('#session-name').val('@sessionName');
+
+        // #region socket
+        socket = io('@socketUrl', {
+            cors: {
+                withCredentials: true
+            }
+        });
+
+        socket.emit('join-session', '@sessionName', '@playerNickname');
+
+        socket.on('chat-message', function (message, nickname) {
+            addToConsole('<strong>' + nickname + ':</strong> ' + message);
+        });
+
+        socket.on('movement-done', function (current, next, movementResult) {
+
+            $('#session-warning').hide();
+
+            let commandInfo = '<strong>' + current + '</strong> oyuncusu <strong>' + movementResult.command + '</strong> oynadı.';
+            addToConsole(commandInfo);
+
+            if (movementResult.check) {
+                $('#session-warning').html('Check !').show();
+            }
+
+            if (movementResult.checkmate) {
+
+                checkmate = true;
+                $('#session-warning').html('Checkmate !').show();
+
+                let message = '<strong>' + current + '</strong> has beated the <strong>' + next + '</strong>';
+                addToConsole(message);
+            }
+
+            if (movementResult.checkmate == false) {
+
+                console.log(movementResult);
+                addToConsole('Sıra <strong>' + next + '</strong> oyuncusunda.');
+
+                if (next.toLowerCase() == '@playerNickname') {
+                    $('#session-turn').html('Sıra sende !').show();
+                } else {
+                    $('#session-turn').hide();
+                }
+            }
+                
+
+            getSession();
+        });
+
+        $('#send-chat').click(function () {
+            socket.emit('chat-message', '@sessionName', $('#chat-text').val(), '@playerNickname');
+            $('#chat-text').val('');
+        });
+        // #endregion
+
+        // #region chat
+        $('#chat-text').keydown(function (e) {
+            // enter
+            if (e.originalEvent.keyCode === 13) {
+                $('#send-chat').trigger('click');
+            }
+
+        });
+        // #endregion
+
+        // #region game session
+        getSession();
+        // #endregion
+
+        $(document).on('click', '#board td img', function () {
+            
+            if (checkmate) {
+                return;
+            }
+
+            let x = $(this).parent().data('x');
+            let y = $(this).parent().data('y');
+
+            let type = $(this).data('type');
+            let color = $(this).data('color');
+            let colorIndex = color === 'Black' ? 0 : 1;
+            let isMyStone = player.toLowerCase() == session.players[colorIndex].nickname.toLowerCase();
+
+            if (isMyStone) {
+                // clear all selecteds
+                $('.selected-stone').removeClass('selected-stone');
+
+                // add selection to current stone
+                $(this).parent().addClass('selected-stone');
+
+                // assign selectedStone
+                selectedStone.type = type;
+                selectedStone.color = color;
+                selectedStone.location.x = x;
+                selectedStone.location.y = y;
+            }
+        });
+
+        $(document).on('click', '#board td', function () {
+
+            if (checkmate == false) {
+                let x = $(this).data('x');
+                let y = $(this).data('y');
+
+                if (selectedStone.type !== '' && !(selectedStone.location.x == x && selectedStone.location.y == y)) {
+                    selectedStone.move(x, y);
+                }
+            }
+            
+        });
+    });
+
+
+    function getSession() {
         $.ajax({
             url: '@apiUrl',
             contentType: 'application/json;charset=utf-8',
@@ -192,8 +329,15 @@
             success: function (data) {
                 console.log(data);
 
-                session = data;
+                if (session == null) {
 
+                    session = data;
+
+                    let current = getCurrentPlayer();
+                    addToConsole('Sıra <strong>' + current + '</strong> oyuncusunda.');
+                }
+
+                session = data;
                 sessionCreate();
                 drawTable();
             },
@@ -203,17 +347,14 @@
             complete: function (xhr, textStatus) {
                 if (textStatus === "success") {
 
-                    // stone selection
-                    stoneSelectionBindings();
-
-                    // stone mmove to target location
-                    stoneMovementBindings();
-
                 }
             }
         });
+    }
 
-    });
+    function setTurn() {
+        socket.emit('movement-done', '@sessionName', '@playerNickname', getCurrentPlayer(), session.movementResult);
+    }
 
     function sessionCreate() {
 
@@ -226,7 +367,14 @@
         return session.players[session.currentIndexer].nickname;
     }
 
+    function clearTable() {
+        //$('#session-warning').hide();
+        $('#board td img').remove();
+    }
+
     function drawTable() {
+        clearTable();
+
         for (var i = 0; i < session.table.stones.length; i++) {
             let stoneInfo = session.table.stones[i];
 
@@ -240,74 +388,18 @@
         }
 
         if (session.movementResult) {
-            addToConsole(session.movementResult.message);
 
-            if (session.movementResult.check == true) {
+            if (session.movementResult.location) {
+                let x = session.movementResult.location.x;
+                let y = session.movementResult.location.y;
 
-                addToConsole('<label style="color:red">Şah !</label>');
-            }
-
-            if (session.movementResult.checkmate == true) {
-                addToConsole('<label style="color:red">Şah mat!</label>');
-            }
-        }
-
-        var currentPlayer = getCurrentPlayer();
-        addToConsole('Sıra <strong>' + currentPlayer + '</strong> oyuncusunda!');
-    }
-
-    function stoneSelectionBindings() {
-
-        $('#board td img').each(function () {
-            $(this).unbind('click');
-        });
-
-        $('#board td img').on('click', function () {
-            debugger;
-            let x = $(this).parent().data('x');
-            let y = $(this).parent().data('y');
-            let type = $(this).data('type');
-            let color = $(this).data('color');
-            let colorIndex = color === 'Black' ? 0 : 1;
-            let isMyStone = player.toLowerCase() == session.players[colorIndex].nickname.toLowerCase();
-
-            // şuanda selectedStone null ise
-            // yeni bir selection yapıyorumdur
-            // ve bu kesinlikle benim taşlarımdan oapiUrlmalı
-            //debugger;
-
-            if (isMyStone) {
-                // clear all selections
+                // clear all selecteds
                 $('.selected-stone').removeClass('selected-stone');
 
-                // add selection to current stone
-                $(this).parent().addClass('selected-stone');
-
-                // assign selectedStone
-                selectedStone.type = type;
-                selectedStone.color = color;
-                selectedStone.location.x = x;
-                selectedStone.location.y = y;
-            } else {
-
-                if (selectedStone.type !== '') {
-                    selectedStone.move(x, y);
-                }
-
+                $('#board td[data-x="' + x + '"][data-y="' + y + '"]').addClass('selected-stone');
             }
 
-        });
-    }
-
-    function stoneMovementBindings() {
-        $('#board td').on('click', function () {
-            let x = $(this).data('x');
-            let y = $(this).data('y');
-
-            if (selectedStone.type !== '' && !(selectedStone.location.x == x && selectedStone.location.y == y)) {
-                selectedStone.move(x, y);
-            }
-        });
+        }
     }
 
     function addToConsole(message) {

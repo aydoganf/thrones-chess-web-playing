@@ -11,7 +11,7 @@ namespace WebChessPlaying.Controllers
         public IActionResult View(Guid id, [FromQuery(Name = "nickname")] string nickname)
         {
             ViewBag.SessionName = id.ToString();
-            ViewBag.PlayerNickname = nickname;
+            ViewBag.PlayerNickname = nickname.ToLower();
             return View();
         }
     }
