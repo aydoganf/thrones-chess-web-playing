@@ -1,6 +1,6 @@
 ﻿@{
-    string socketUrl = "https://thrones-chess-socket.herokuapp.com/"; //"http://localhost:5000";
-    string apiUrl = "https://thrones-chess-api.herokuapp.com/api/chess"; //"http://localhost:5005/api/chess";
+    string socketUrl = ViewBag.SocketUrl; //"https://thrones-chess-socket.herokuapp.com/"; //"http://localhost:5000";
+    string apiUrl = ViewBag.APIBaseUrl; //"https://thrones-chess-api.herokuapp.com/api/chess"; //"http://localhost:5005/api/chess";
     string sessionName = ViewBag.SessionName;
     string playerNickname = ViewBag.PlayerNickname;
     ViewData["Title"] = "View";
@@ -68,7 +68,7 @@
     }
 </style>
 
-<h1>Chess Session</h1>
+<h1 id="session-header"></h1>
 <hr />
 @{
     <div class="row">
@@ -346,7 +346,7 @@
             },
             complete: function (xhr, textStatus) {
                 if (textStatus === "success") {
-
+                    $('#session-header').text(session.players[0].nickname + ' vs ' + session.players[1].nickname);
                 }
             }
         });

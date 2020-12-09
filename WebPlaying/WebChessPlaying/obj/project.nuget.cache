@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "/4ozfc35gCT92x4KMSTOidN2P1YD/bMcwVYjUZ9/6Df00nQDwemXsTnj2oXLrpAkIpgCC+p3ys6FQ1nUnMG8Sg==",
+  "dgSpecHash": "zx9d7TYGjlRW4hKtFRvwxRRD7IpIyNHh9RGp0QIC78ih3w7pRQfZ99d/FSfiOgGtp5JwTlzFy9LEXcKt58bkHQ==",
   "success": true,
   "projectFilePath": "C:\\Users\\faruk\\source\\repos\\thrones-chess-web-playing\\WebPlaying\\WebChessPlaying\\WebChessPlaying.csproj",
   "expectedPackageFiles": [
@@ -110,7 +110,9 @@
     "C:\\Users\\faruk\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.3\\system.threading.tasks.extensions.4.5.3.nupkg.sha512",
     "C:\\Users\\faruk\\.nuget\\packages\\system.threading.timer\\4.3.0\\system.threading.timer.4.3.0.nupkg.sha512",
     "C:\\Users\\faruk\\.nuget\\packages\\system.xml.readerwriter\\4.3.0\\system.xml.readerwriter.4.3.0.nupkg.sha512",
-    "C:\\Users\\faruk\\.nuget\\packages\\system.xml.xdocument\\4.3.0\\system.xml.xdocument.4.3.0.nupkg.sha512"
+    "C:\\Users\\faruk\\.nuget\\packages\\system.xml.xdocument\\4.3.0\\system.xml.xdocument.4.3.0.nupkg.sha512",
+    "C:\\Users\\faruk\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\3.1.10\\microsoft.aspnetcore.app.ref.3.1.10.nupkg.sha512",
+    "C:\\Users\\faruk\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\3.1.10\\microsoft.netcore.app.host.win-x64.3.1.10.nupkg.sha512"
   ],
   "logs": []
 }

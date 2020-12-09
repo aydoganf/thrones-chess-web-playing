@@ -3,10 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using WebChessPlaying.Configuration;
 
 namespace WebChessPlaying
 {
@@ -23,11 +20,15 @@ namespace WebChessPlaying
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
+
+            services.AddSingleton<IAppConfiguration, AppConfiguration>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.ApplicationServices.GetService<IAppConfiguration>()?.Configure(Configuration["Application:SocketUrl"], Configuration["Application:APIBaseUrl"]);
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

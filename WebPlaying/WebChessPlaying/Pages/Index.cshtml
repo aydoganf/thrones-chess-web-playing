@@ -1,22 +1,78 @@
 ﻿@page
 @model IndexModel
 @{
-    string apiUrl = "https://thrones-chess-api.herokuapp.com/api/chess"; // "http://localhost:5005/api/chess";
-    ViewData["Title"] = "Home page";
+    string apiUrl = ViewData["APIBaseUrl"].ToString(); //"https://thrones-chess-api.herokuapp.com/api/chess"; // "http://localhost:5005/api/chess";
+    ViewData["Title"] = "Anasayfa";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Please give the session name below:</p>
+<style type="text/css">
+    .session-container{
+        margin-bottom: 20px !important;
+        position: relative;
+        border: 1px solid #808080;
+        border-radius: 6px;
+    }
+
+    .session-setting{
+        position: absolute;
+        z-index: 100;
+        opacity: 0.4;
+        background:#808080;
+        width: 100%;
+        height: 40px;
+    }
+
+</style>
+
+<div class="text-center mt-5">
+    <h1 class="display-4">Thrones Chess'e</h1>
+    <h1 class="display-4">Hoş geldiniz</h1>
+</div>
+
+<div class="alert alert-primary text-center mt-5"  style="display:none;">
+    <p>Oyun bilgileri ile giriş yapabilmek için:</p>
     <p>
-        <input type="text" class="form-control-lg" placeholder="nickname" id="nickname-to-enter" />
-        <input type="text" class="form-control-lg" id="session-name" placeholder="session name" />
-        <button id="enter-session" class="btn btn-lg btn-primary">Enter</button>
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="nickname" id="nickname-to-enter" />
+            <input type="text" class="form-control" id="session-name" placeholder="session name" />
+            <div class="input-group-append">
+                <button id="enter-session" class="btn btn-primary">Enter</button>
+            </div>
+        </div>
+        
+        
+        
     </p>
-    <p>OR create a new session</p>
+    
+</div>
+
+<div class="alert alert-info text-center mt-5">
+    <p>Yeni bir oyun oluşturmak için:</p>
     <p>
-        <input type="text" class="form-control-lg" placeholder="nickname" id="nickname" /> <button id="create-session" class="btn btn-lg btn-success">Create</button>
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="nickname" id="nickname" />
+            <div class="input-group-append">
+                <button id="create-session" class="btn btn-success">Oyun kur!</button>
+            </div>
+        </div>
+         
     </p>
+
+    <div class="alert alert-primary text-left">
+        Rakibin otomatik atanacaktır. Daha sonra rakibin oyuna katılabilir.
+    </div>
+</div>
+
+<hr />
+
+<h4>Devam Eden Oyunlar</h4>
+
+
+<div class="row mt-5" id="sessions">    
+</div>
+
+<div class="alert alert-danger" id="sessions-empty" style="display:none">
+    <h6>Şuan aktif bir oyun bulunmamaktadır.</h6>
 </div>
 
 <script src="~/lib/jquery/dist/jquery.js"></script>
@@ -65,6 +121,71 @@
 
         });
 
+        getSessions();
     });
+
+    $(document).on('click', '.session-delete', function () {
+
+        let sessionName = $(this).data('session');
+        $.ajax({
+            type: 'DELETE',
+            url: '@apiUrl/' + sessionName,
+            dataType: 'JSON',
+            contentType: 'application/json;charset=utf-8',
+            success: function () {
+                getSessions();
+            }
+        })
+
+    });
+
+    function getSessions() {
+
+        $.ajax({
+            type: 'GET',
+            url: '@apiUrl/sessions',
+            dataType: 'JSON',
+            contentType: 'application/json;charset=utf-8',
+            success: function (response) {
+                buildSessions(response);
+            }
+        });
+
+    }
+
+    function buildSessions(sessions) {
+
+        $('#sessions').html('');
+
+        if (sessions.length == 0) {
+            $('#sessions-empty').show();
+        }
+
+        for (var i = 0; i < sessions.length; i++) {
+
+            let session = sessions[i];
+            let player0 = session.players[0].nickname;
+            let player1 = session.players[1].nickname;
+
+            let div = '<div class="col-md-3">';
+            div += '<div class="session-container">';
+            div += '<button class="btn btn-block btn-danger session-delete" data-session="' + session.sessionName + '">Bu oyunu sil</button>';
+            div += '<img src = "/lib/icons/table.PNG" class="img-fluid session-img" />';
+            div += '<div class="input-group text-center">';
+            div += '<div class="input-group-prepend">';
+            div += '<a href="/session/view/' + session.sessionName + '?nickname=' + player0 + '" class="btn btn-secondary text-white">' + player0 + '</a>';
+            div += '</div>';
+            div += '<input type="text" class="form-control" disabled value="' + session.title + '" style="text-align:center !important" />';
+            div += '<div class="input-group-prepend">';
+            div += '<a href="/session/view/' + session.sessionName + '?nickname=' + player1 + '" class="btn btn-info text-white">' + player1 + '</a>';
+            div += '</div>';
+            div += '</div>';
+            div += '</div>';
+            div += '</div >';
+
+            $('#sessions').append(div);
+        }
+
+    }
 
 </script>
